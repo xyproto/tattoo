@@ -1,4 +1,4 @@
-package main
+package tattoo
 
 type Export int
 

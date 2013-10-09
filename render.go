@@ -1,9 +1,9 @@
-package main
+package tattoo
 
 import (
 	"errors"
 	"fmt"
-	"github.com/shellex/tattoo/webapp"
+	"github.com/xyproto/tattoo/webapp"
 	"html/template"
 	"net/http"
 	"os"
@@ -259,20 +259,19 @@ func RenderWriterComments(ctx *webapp.Context, offset int) error {
 }
 
 func Render404page(ctx *webapp.Context, msg string) error {
+	var err error = nil
 	if notFoundTPL != nil {
 		vars := make(map[string]interface{})
 		vars["Message"] = msg
 		vars["URL"] = ctx.Request.RequestURI
 		vars["Referer"] = ctx.Request.Referer()
 		data := MakeData(ctx, vars)
-		err := ctx.Execute(notFoundTPL, &data)
-		return err
+		err = ctx.Execute(notFoundTPL, &data)
 	} else {
 		ctx.Error(fmt.Sprintf("%s: %s", webapp.ErrNotFound, msg),
 			http.StatusNotFound)
-		return nil
 	}
-	return nil
+	return err
 }
 
 func RenderWriterSettings(ctx *webapp.Context, msg string) error {

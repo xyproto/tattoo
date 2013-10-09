@@ -1,17 +1,22 @@
-package main
+package tattoo
 
 import (
 	"fmt"
-	"github.com/shellex/tattoo/webapp"
+	"github.com/xyproto/tattoo/webapp"
 	"html/template"
+	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
 )
 
 const NOT_FOUND_MESSAGE = "Sorry, the page you were looking does not exist."
+
+var startUpTime int64
 
 func isAuthorized(c *webapp.Context) bool {
 	for _, cookie := range c.Request.Cookies() {
@@ -110,7 +115,7 @@ func HandleGuard(c *webapp.Context) {
 	var err error
 	action := c.Request.FormValue("action")
 	if action == "logout" {
-		RevokeSessionTokon()
+		RevokeSessionToken()
 		c.Redirect("/guard", http.StatusFound)
 		return
 	}
@@ -454,5 +459,54 @@ func HandleSingle(c *webapp.Context, pagename string) {
 		}
 	} else {
 		Render404page(c, NOT_FOUND_MESSAGE)
+	}
+}
+
+func Serve(useFCGI bool) {
+	if err := GetConfig().EnsurePresent(); err != nil {
+		fmt.Println("Failed to ensure that configuration is present:", err)
+	}
+	if err := GetConfig().Load(); err != nil {
+		fmt.Println("Failed to load configuration file")
+	}
+	cfg := GetConfig()
+	startUpTime = time.Now().Unix()
+	rootPath, _ := os.Getwd()
+	rootURL := path.Join(cfg.Path, "/")
+	systemStaticPath := path.Join(rootPath, "/sys/static")
+	systemStaticURL := path.Join(cfg.Path, "/sys/static")
+
+	themePath := path.Join(rootPath, "theme")
+	themeURL := path.Join(cfg.Path, "/theme")
+
+	app := webapp.App{}
+	app.Log("App Starts", "OK")
+	app.SetStaticPath(systemStaticURL, systemStaticPath)
+	app.SetStaticPath(themeURL, themePath)
+	app.SetHandler(rootURL, HandleRoot)
+
+	// Load DB
+	app.Log("Tattoo DB", "Load DB")
+	TattooDB.Load(&app)
+
+	TattooDB.SetVar("RootURL", rootURL)
+	TattooDB.SetVar("SystemStaticURL", systemStaticURL)
+
+	// load templates
+	if err := LoadSystemTemplates(); err != nil {
+		app.Log("Error", fmt.Sprintf("Failed to load system templates: %v", err))
+		return
+	}
+	if err := LoadTheme(&app, GetConfig().ThemeName); err != nil {
+		app.Log("Error", fmt.Sprintf("Failed to load theme: %v", err))
+	}
+
+	// Start Server.
+	if useFCGI {
+		log.Printf("Server Starts(FastCGI): Listen on port %d\n", GetConfig().Port)
+		app.RunCGI(GetConfig().Port)
+	} else {
+		log.Printf("Server Starts: Listen on port %d\n", GetConfig().Port)
+		app.Run(GetConfig().Port)
 	}
 }

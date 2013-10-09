@@ -1,9 +1,9 @@
-package main
+package tattoo
 
 import (
 	"errors"
 	"github.com/russross/blackfriday"
-	"github.com/shellex/tattoo/webapp"
+	"github.com/xyproto/tattoo/webapp"
 	"html/template"
 	"log"
 	"sort"

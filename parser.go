@@ -1,7 +1,7 @@
-package main
+package tattoo
 
 import (
-	"github.com/shellex/tattoo/webapp"
+	"github.com/xyproto/tattoo/webapp"
 	"time"
 )
 
